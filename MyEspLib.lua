@@ -1,236 +1,169 @@
---Settings--
-local ESP = {
-    Enabled = false,
-    Boxes = true,
-    BoxShift = CFrame.new(0, -1.5, 0),
-    BoxSize = Vector3.new(4, 6, 0),
-    Color = Color3.fromRGB(255, 170, 0),
-    FaceCamera = false,
-    Names = true,
-    TeamColor = true,
-    Thickness = 2,
-    AttachShift = 1,
-    TeamMates = true,
-    Players = true,
-    
-    Objects = setmetatable({}, {__mode="kv"}),  -- Store ESP objects
-    Overrides = {}
+local Config = {
+    Box               = false,
+    BoxOutline        = false,
+    BoxColor          = Color3.fromRGB(255,255,255),
+    BoxOutlineColor   = Color3.fromRGB(0,0,0),
+    HealthBar         = false,
+    HealthBarSide     = "Left", -- Left, Bottom, Right
+    Names             = false,
+    NamesOutline      = false,
+    NamesColor        = Color3.fromRGB(255,255,255),
+    NamesOutlineColor = Color3.fromRGB(0,0,0),
+    NamesFont         = 2, -- 0, 1, 2, 3
+    NamesSize         = 13,
+    MaxDistance       = 350  -- Максимальное расстояние в метрах
 }
 
---Declarations--
-local cam = workspace.CurrentCamera
-local plrs = game:GetService("Players")
-local plr = plrs.LocalPlayer
-local mouse = plr:GetMouse()
+local rainbowEffect = false -- Переменная для контроля радужного эффекта
 
-local V3new = Vector3.new
-local WorldToViewportPoint = cam.WorldToViewportPoint
-
---Draw Function to simplify creation of drawing objects
-local function Draw(obj, props)
-    local new = Drawing.new(obj)
-    
-    props = props or {}
-    for i, v in pairs(props) do
-        new[i] = v
-    end
-    return new
-end
-
--- Get Team function to return player's team
-function ESP:GetTeam(p)
-    local ov = self.Overrides.GetTeam
-    if ov then
-        return ov(p)
-    end
-    
-    return p and p.Team
-end
-
--- Function to check if two players are teammates
-function ESP:IsTeamMate(p)
-    local ov = self.Overrides.IsTeamMate
-    if ov then
-        return ov(p)
-    end
-    
-    return self:GetTeam(p) == self:GetTeam(plr)
-end
-
--- Get the ESP color depending on the object
-function ESP:GetColor(obj)
-    local ov = self.Overrides.GetColor
-    if ov then
-        return ov(obj)
-    end
-    local p = self:GetPlrFromChar(obj)
-    return p and self.TeamColor and p.Team and p.Team.TeamColor.Color or self.Color
-end
-
--- Get player from the character
-function ESP:GetPlrFromChar(char)
-    local ov = self.Overrides.GetPlrFromChar
-    if ov then
-        return ov(char)
-    end
-    
-    return plrs:GetPlayerFromCharacter(char)
-end
-
--- Toggle ESP visibility
-function ESP:Toggle(bool)
-    self.Enabled = bool
-    if not bool then
-        for i, v in pairs(self.Objects) do
-            if v.Type == "Box" then
-                if v.Temporary then
-                    v:Remove()
-                else
-                    for i, v in pairs(v.Components) do
-                        v.Visible = false
-                    end
+-- Функция для обновления радужного эффекта
+local function UpdateRainbowEffect()
+    if rainbowEffect then
+        local hue = tick() % 5 / 5
+        -- Радужный цвет для Box и Name
+        Config.BoxColor = Color3.fromHSV(hue, 1, 1)
+        Config.NamesColor = Color3.fromHSV(hue, 1, 1)
+        
+        -- Обновление всех Box и Names для игроков
+        for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                -- Обновляем Box цвет
+                if Config.Box then
+                    -- Применяем новый цвет для Box
+                end
+                -- Обновляем Name цвет
+                if Config.Names then
+                    -- Применяем новый цвет для Names
                 end
             end
         end
     end
 end
 
--- Create and update ESP Box for a player or object
-function ESP:Add(obj, options)
-    if not obj.Parent and not options.RenderInNil then
-        return warn(obj, "has no parent")
-    end
-
-    local box = setmetatable({
-        Name = options.Name or obj.Name,
-        Type = "Box",
-        Color = options.Color,
-        Size = options.Size or self.BoxSize,
-        Object = obj,
-        Player = options.Player or plrs:GetPlayerFromCharacter(obj),
-        PrimaryPart = options.PrimaryPart or obj.ClassName == "Model" and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChildWhichIsA("BasePart")) or obj:IsA("BasePart") and obj,
-        Components = {},
-        IsEnabled = options.IsEnabled,
-        Temporary = options.Temporary,
-        ColorDynamic = options.ColorDynamic,
-        RenderInNil = options.RenderInNil
-    }, boxBase)
-
-    -- Remove existing ESP if any
-    if self:GetBox(obj) then
-        self:GetBox(obj):Remove()
-    end
-
-    -- Draw 3D Box
-    box.Components["Box3D"] = Draw("Quad", {
-        Thickness = self.Thickness,
-        Color = box.Color,
-        Transparency = 1,
-        Filled = false,
-        Visible = self.Enabled and self.Boxes
-    })
-
-    -- Draw 2D Box
-    box.Components["Box2D"] = Draw("Quad", {
-        Thickness = self.Thickness,
-        Color = box.Color,
-        Transparency = 1,
-        Filled = false,
-        Visible = self.Enabled and self.Boxes
-    })
-
-    -- Draw Name (Nicknames)
-    box.Components["Name"] = Draw("Text", {
-        Text = box.Name,
-        Color = box.Color,
-        Center = true,
-        Outline = true,
-        Size = 19,
-        Visible = self.Enabled and self.Names
-    })
-
-    -- Draw Distance (for the object)
-    box.Components["Distance"] = Draw("Text", {
-        Color = box.Color,
-        Center = true,
-        Outline = true,
-        Size = 19,
-        Visible = self.Enabled and self.Names
-    })
-
-    -- Store the box object in ESP objects
-    self.Objects[obj] = box
-
-    -- Update Box every frame
-    obj.AncestryChanged:Connect(function(_, parent)
-        if parent == nil and ESP.AutoRemove ~= false then
-            box:Remove()
-        end
-    end)
-
-    -- Handle humanoid death
-    local hum = obj:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.Died:Connect(function()
-            if ESP.AutoRemove ~= false then
-                box:Remove()
-            end
-        end)
-    end
-
-    return box
-end
-
--- Update and Render ESP elements in the scene
-game:GetService("RunService").RenderStepped:Connect(function()
-    cam = workspace.CurrentCamera
-    for _, v in pairs(ESP.Objects) do
-        if v.Update then
-            local success, err = pcall(v.Update, v)
-            if not success then warn("[ESP Error]", err, v.Object:GetFullName()) end
-        end
+-- Цикл для обновления радужного эффекта
+spawn(function()
+    while true do
+        UpdateRainbowEffect()
+        wait(0.1)
     end
 end)
 
--- Add ESP for newly spawned players
-local function CharAdded(char)
-    local p = plrs:GetPlayerFromCharacter(char)
-    if not char:FindFirstChild("HumanoidRootPart") then
-        local ev
-        ev = char.ChildAdded:Connect(function(c)
-            if c.Name == "HumanoidRootPart" then
-                ev:Disconnect()
-                ESP:Add(char, {
-                    Name = p.Name,
-                    Player = p,
-                    PrimaryPart = c
-                })
+-- Функция для создания ESP
+function CreateEsp(Player)
+    local Box, BoxOutline, Name, HealthBar, HealthBarOutline = Drawing.new("Square"), Drawing.new("Square"), Drawing.new("Text"), Drawing.new("Square"), Drawing.new("Square")
+    local Updater = game:GetService("RunService").RenderStepped:Connect(function()
+        if Player.Character ~= nil and Player.Character:FindFirstChild("Humanoid") ~= nil and Player.Character:FindFirstChild("HumanoidRootPart") ~= nil and Player.Character.Humanoid.Health > 0 and Player.Character:FindFirstChild("Head") ~= nil then
+            local Target2dPosition, IsVisible = workspace.CurrentCamera:WorldToViewportPoint(Player.Character.HumanoidRootPart.Position)
+            local distance = (workspace.CurrentCamera.CFrame.p - Player.Character.HumanoidRootPart.Position).magnitude  -- Вычисление дистанции
+            if distance > Config.MaxDistance then  -- Если игрок слишком далеко, скрываем ESP
+                Box.Visible = false
+                BoxOutline.Visible = false
+                Name.Visible = false
+                HealthBar.Visible = false
+                HealthBarOutline.Visible = false
+                return
             end
-        end)
-    else
-        ESP:Add(char, {
-            Name = p.Name,
-            Player = p,
-            PrimaryPart = char.HumanoidRootPart
-        })
+            
+            local scale_factor = 1 / (Target2dPosition.Z * math.tan(math.rad(workspace.CurrentCamera.FieldOfView * 0.5)) * 2) * 100
+            local width, height = math.floor(40 * scale_factor), math.floor(60 * scale_factor)
+            if Config.Box then
+                Box.Visible = IsVisible
+                Box.Color = Config.BoxColor
+                Box.Size = Vector2.new(width, height)
+                Box.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2)
+                Box.Thickness = 1
+                Box.ZIndex = 69
+                if Config.BoxOutline then
+                    BoxOutline.Visible = IsVisible
+                    BoxOutline.Color = Config.BoxOutlineColor
+                    BoxOutline.Size = Vector2.new(width, height)
+                    BoxOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2)
+                    BoxOutline.Thickness = 3
+                    BoxOutline.ZIndex = 1
+                else
+                    BoxOutline.Visible = false
+                end
+            else
+                Box.Visible = false
+                BoxOutline.Visible = false
+            end
+            if Config.Names then
+                Name.Visible = IsVisible
+                Name.Color = Config.NamesColor
+                Name.Text = Player.Name .. " " .. math.floor(distance) .. "m"
+                Name.Center = true
+                Name.Outline = Config.NamesOutline
+                Name.OutlineColor = Config.NamesOutlineColor
+                Name.Position = Vector2.new(Target2dPosition.X, Target2dPosition.Y - height * 0.5 + -15)
+                Name.Font = Config.NamesFont
+                Name.Size = Config.NamesSize
+            else
+                Name.Visible = false
+            end
+            if Config.HealthBar then
+                HealthBarOutline.Visible = IsVisible
+                HealthBarOutline.Color = Color3.fromRGB(0, 0, 0)
+                HealthBarOutline.Filled = true
+                HealthBarOutline.ZIndex = 1
+    
+                HealthBar.Visible = IsVisible
+                HealthBar.Color = Color3.fromRGB(255, 0, 0):lerp(Color3.fromRGB(0, 255, 0), Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth)
+                HealthBar.Thickness = 1
+                HealthBar.Filled = true
+                HealthBar.ZIndex = 69
+                if Config.HealthBarSide == "Left" then
+                    HealthBarOutline.Size = Vector2.new(2, height)
+                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(-3, 0)
+                    
+                    HealthBar.Size = Vector2.new(1, -(HealthBarOutline.Size.Y - 2) * (Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth))
+                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1, -1 + HealthBarOutline.Size.Y)
+                elseif Config.HealthBarSide == "Bottom" then
+                    HealthBarOutline.Size = Vector2.new(width, 3)
+                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(0, height + 2)
+
+                    HealthBar.Size = Vector2.new((HealthBarOutline.Size.X - 2) * (Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth), 1)
+                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1, -1 + HealthBarOutline.Size.Y)
+                elseif Config.HealthBarSide == "Right" then
+                    HealthBarOutline.Size = Vector2.new(2, height)
+                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(width + 1, 0)
+                    
+                    HealthBar.Size = Vector2.new(1, -(HealthBarOutline.Size.Y - 2) * (Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth))
+                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1, -1 + HealthBarOutline.Size.Y)
+                end
+            else
+                HealthBar.Visible = false
+                HealthBarOutline.Visible = false
+            end
+        else
+            Box.Visible = false
+            BoxOutline.Visible = false
+            Name.Visible = false
+            HealthBar.Visible = false
+            HealthBarOutline.Visible = false
+            if not Player then
+                Box:Remove()
+                BoxOutline:Remove()
+                Name:Remove()
+                HealthBar:Remove()
+                HealthBarOutline:Remove()
+                Updater:Disconnect()
+            end
+        end
+    end)
+end
+
+for _, v in pairs(game:GetService("Players"):GetPlayers()) do
+    if v ~= game:GetService("Players").LocalPlayer then
+        CreateEsp(v)
+        v.CharacterAdded:Connect(CreateEsp(v))
     end
 end
 
--- Add new player
-local function PlayerAdded(p)
-    p.CharacterAdded:Connect(CharAdded)
-    if p.Character then
-        coroutine.wrap(CharAdded)(p.Character)
+game:GetService("Players").PlayerAdded:Connect(function(v)
+    if v ~= game:GetService("Players").LocalPlayer then
+        CreateEsp(v)
+        v.CharacterAdded:Connect(CreateEsp(v))
     end
-end
+end)
 
-plrs.PlayerAdded:Connect(PlayerAdded)
-
--- Initialize ESP for all players currently in the game
-for _, v in pairs(plrs:GetPlayers()) do
-    if v ~= plr then
-        PlayerAdded(v)
-    end
-end
-
-return ESP
+return Config
