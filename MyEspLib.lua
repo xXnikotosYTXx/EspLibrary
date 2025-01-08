@@ -3,57 +3,22 @@ local Config = {
     BoxOutline        = false,
     BoxColor          = Color3.fromRGB(255,255,255),
     BoxOutlineColor   = Color3.fromRGB(0,0,0),
-    HealthBar         = false,
-    HealthBarSide     = "Left", -- Left, Bottom, Right
+    HealthBar         = true, -- Включаем отображение здоровья
+    HealthBarSide     = "Left", -- Left,Bottom,Right
     Names             = false,
     NamesOutline      = false,
     NamesColor        = Color3.fromRGB(255,255,255),
     NamesOutlineColor = Color3.fromRGB(0,0,0),
-    NamesFont         = 2, -- 0, 1, 2, 3
+    NamesFont         = 2, -- 0,1,2,3
     NamesSize         = 13,
     MaxDistance       = 350  -- Максимальное расстояние в метрах
 }
 
-local rainbowEffect = false -- Переменная для контроля радужного эффекта
-
--- Функция для обновления радужного эффекта
-local function UpdateRainbowEffect()
-    if rainbowEffect then
-        local hue = tick() % 5 / 5
-        -- Радужный цвет для Box и Name
-        Config.BoxColor = Color3.fromHSV(hue, 1, 1)
-        Config.NamesColor = Color3.fromHSV(hue, 1, 1)
-        
-        -- Обновление всех Box и Names для игроков
-        for _, player in pairs(game:GetService("Players"):GetPlayers()) do
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                -- Обновляем Box цвет
-                if Config.Box then
-                    -- Применяем новый цвет для Box
-                end
-                -- Обновляем Name цвет
-                if Config.Names then
-                    -- Применяем новый цвет для Names
-                end
-            end
-        end
-    end
-end
-
--- Цикл для обновления радужного эффекта
-spawn(function()
-    while true do
-        UpdateRainbowEffect()
-        wait(0.1)
-    end
-end)
-
--- Функция для создания ESP
 function CreateEsp(Player)
-    local Box, BoxOutline, Name, HealthBar, HealthBarOutline = Drawing.new("Square"), Drawing.new("Square"), Drawing.new("Text"), Drawing.new("Square"), Drawing.new("Square")
+    local Box,BoxOutline,Name,HealthBar,HealthBarOutline = Drawing.new("Square"),Drawing.new("Square"),Drawing.new("Text"),Drawing.new("Square"),Drawing.new("Square")
     local Updater = game:GetService("RunService").RenderStepped:Connect(function()
-        if Player.Character ~= nil and Player.Character:FindFirstChild("Humanoid") ~= nil and Player.Character:FindFirstChild("HumanoidRootPart") ~= nil and Player.Character.Humanoid.Health > 0 and Player.Character:FindFirstChild("Head") ~= nil then
-            local Target2dPosition, IsVisible = workspace.CurrentCamera:WorldToViewportPoint(Player.Character.HumanoidRootPart.Position)
+    if Player.Character ~= nil and Player.Character:FindFirstChild("Humanoid") ~= nil and Player.Character:FindFirstChild("HumanoidRootPart") ~= nil and Player.Character.Humanoid.Health > 0 and Player.Character:FindFirstChild("Head") ~= nil then
+            local Target2dPosition,IsVisible = workspace.CurrentCamera:WorldToViewportPoint(Player.Character.HumanoidRootPart.Position)
             local distance = (workspace.CurrentCamera.CFrame.p - Player.Character.HumanoidRootPart.Position).magnitude  -- Вычисление дистанции
             if distance > Config.MaxDistance then  -- Если игрок слишком далеко, скрываем ESP
                 Box.Visible = false
@@ -69,15 +34,15 @@ function CreateEsp(Player)
             if Config.Box then
                 Box.Visible = IsVisible
                 Box.Color = Config.BoxColor
-                Box.Size = Vector2.new(width, height)
-                Box.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2)
+                Box.Size = Vector2.new(width,height)
+                Box.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2,Target2dPosition.Y - Box.Size.Y / 2)
                 Box.Thickness = 1
                 Box.ZIndex = 69
                 if Config.BoxOutline then
                     BoxOutline.Visible = IsVisible
                     BoxOutline.Color = Config.BoxOutlineColor
-                    BoxOutline.Size = Vector2.new(width, height)
-                    BoxOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2)
+                    BoxOutline.Size = Vector2.new(width,height)
+                    BoxOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2,Target2dPosition.Y - Box.Size.Y / 2)
                     BoxOutline.Thickness = 3
                     BoxOutline.ZIndex = 1
                 else
@@ -90,45 +55,51 @@ function CreateEsp(Player)
             if Config.Names then
                 Name.Visible = IsVisible
                 Name.Color = Config.NamesColor
-                Name.Text = Player.Name .. " " .. math.floor(distance) .. "m"
+                Name.Text = Player.Name.." "..math.floor(distance).."m"
                 Name.Center = true
                 Name.Outline = Config.NamesOutline
                 Name.OutlineColor = Config.NamesOutlineColor
-                Name.Position = Vector2.new(Target2dPosition.X, Target2dPosition.Y - height * 0.5 + -15)
+                Name.Position = Vector2.new(Target2dPosition.X,Target2dPosition.Y - height * 0.5 + -15)
                 Name.Font = Config.NamesFont
                 Name.Size = Config.NamesSize
             else
                 Name.Visible = false
             end
             if Config.HealthBar then
+                -- Задаем параметры для внешней рамки полосы здоровья
                 HealthBarOutline.Visible = IsVisible
-                HealthBarOutline.Color = Color3.fromRGB(0, 0, 0)
+                HealthBarOutline.Color = Color3.fromRGB(0,0,0)
                 HealthBarOutline.Filled = true
                 HealthBarOutline.ZIndex = 1
-    
+
+                -- Задаем параметры для самой полосы здоровья
                 HealthBar.Visible = IsVisible
-                HealthBar.Color = Color3.fromRGB(255, 0, 0):lerp(Color3.fromRGB(0, 255, 0), Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth)
+                local humanoid = Player.Character:FindFirstChild("Humanoid")
+                local healthPercentage = humanoid.Health / humanoid.MaxHealth
+                HealthBar.Color = Color3.fromRGB(255,0,0):lerp(Color3.fromRGB(0,255,0), healthPercentage)
                 HealthBar.Thickness = 1
                 HealthBar.Filled = true
                 HealthBar.ZIndex = 69
-                if Config.HealthBarSide == "Left" then
-                    HealthBarOutline.Size = Vector2.new(2, height)
-                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(-3, 0)
-                    
-                    HealthBar.Size = Vector2.new(1, -(HealthBarOutline.Size.Y - 2) * (Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth))
-                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1, -1 + HealthBarOutline.Size.Y)
-                elseif Config.HealthBarSide == "Bottom" then
-                    HealthBarOutline.Size = Vector2.new(width, 3)
-                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(0, height + 2)
 
-                    HealthBar.Size = Vector2.new((HealthBarOutline.Size.X - 2) * (Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth), 1)
-                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1, -1 + HealthBarOutline.Size.Y)
-                elseif Config.HealthBarSide == "Right" then
-                    HealthBarOutline.Size = Vector2.new(2, height)
-                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2, Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(width + 1, 0)
+                -- В зависимости от расположения полосы здоровья на экране
+                if Config.HealthBarSide == "Left" then
+                    HealthBarOutline.Size = Vector2.new(2,height)
+                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2,Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(-3,0)
                     
-                    HealthBar.Size = Vector2.new(1, -(HealthBarOutline.Size.Y - 2) * (Player.Character:FindFirstChild("Humanoid").Health / Player.Character:FindFirstChild("Humanoid").MaxHealth))
-                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1, -1 + HealthBarOutline.Size.Y)
+                    HealthBar.Size = Vector2.new(1,-(HealthBarOutline.Size.Y - 2) * healthPercentage)
+                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1,-1 + HealthBarOutline.Size.Y)
+                elseif Config.HealthBarSide == "Bottom" then
+                    HealthBarOutline.Size = Vector2.new(width,3)
+                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2,Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(0,height + 2)
+
+                    HealthBar.Size = Vector2.new((HealthBarOutline.Size.X - 2) * healthPercentage,1)
+                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1,-1 + HealthBarOutline.Size.Y)
+                elseif Config.HealthBarSide == "Right" then
+                    HealthBarOutline.Size = Vector2.new(2,height)
+                    HealthBarOutline.Position = Vector2.new(Target2dPosition.X - Box.Size.X / 2,Target2dPosition.Y - Box.Size.Y / 2) + Vector2.new(width + 1,0)
+                    
+                    HealthBar.Size = Vector2.new(1,-(HealthBarOutline.Size.Y - 2) * healthPercentage)
+                    HealthBar.Position = HealthBarOutline.Position + Vector2.new(1,-1 + HealthBarOutline.Size.Y)
                 end
             else
                 HealthBar.Visible = false
@@ -152,18 +123,18 @@ function CreateEsp(Player)
     end)
 end
 
-for _, v in pairs(game:GetService("Players"):GetPlayers()) do
-    if v ~= game:GetService("Players").LocalPlayer then
-        CreateEsp(v)
-        v.CharacterAdded:Connect(CreateEsp(v))
-    end
+for _,v in pairs(game:GetService("Players"):GetPlayers()) do
+   if v ~= game:GetService("Players").LocalPlayer then
+      CreateEsp(v)
+      v.CharacterAdded:Connect(CreateEsp(v))
+   end
 end
 
 game:GetService("Players").PlayerAdded:Connect(function(v)
-    if v ~= game:GetService("Players").LocalPlayer then
-        CreateEsp(v)
-        v.CharacterAdded:Connect(CreateEsp(v))
-    end
+   if v ~= game:GetService("Players").LocalPlayer then
+      CreateEsp(v)
+      v.CharacterAdded:Connect(CreateEsp(v))
+   end
 end)
 
 return Config
