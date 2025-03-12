@@ -211,3 +211,44 @@ local Esp = {
                 end
             end)
         end
+function LoadEsp()
+                for _,Player in next, game.Players:GetPlayers() do
+                    if Player ~= game.Players.LocalPlayer then
+                        local NewEsp = Esp.New(Player)
+            
+                        task.spawn(function()
+                            while task.wait() do
+                                if not game.Players:FindFirstChild(Player.Name) then break end
+            
+                                pcall(function()
+                                    local Stats = game.ReplicatedStorage["Stats" .. Player.Name]
+                                    NewEsp.Misc = string.format("[%s] \n [%d/%d]", Stats.Stats.DF.Value ~= "" and Stats.Stats.DF.Value or "None", Stats.Stamina.Value, Stats.Stamina.MaxValue)
+                                end)
+                            end
+                        end)
+                    end
+                end
+                
+                game.Players.PlayerAdded:Connect(function(Player)
+                    local NewEsp = Esp.New(Player)
+            
+                    task.spawn(function()
+                        while task.wait() do
+                            if not game.Players:FindFirstChild(Player.Name) then break end
+            
+                            pcall(function()
+                                local Stats = game.ReplicatedStorage["Stats" .. Player.Name]
+                                NewEsp.Misc = string.format("[%s] \n [%d/%d]", Stats.Stats.DF.Value ~= "" and Stats.Stats.DF.Value or "None", Stats.Stamina.Value, Stats.Stamina.MaxValue)
+                            end)
+                        end
+                    end)
+                end)
+                
+                game.Players.PlayerRemoving:Connect(function(Player)
+                    for _,CachedItem in next, Esp.Cache do
+                        if CachedItem.Player == Player then
+                            CachedItem:Remove()
+                        end
+                    end
+                end)
+            end
