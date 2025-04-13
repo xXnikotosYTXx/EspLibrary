@@ -31,6 +31,7 @@ local ESP = {
         },
         Flags = {
             Enabled = true,
+            Misc = true, -- Новая опция для Stamina/DF
         },
         Distances = {
             Enabled = true, 
@@ -152,6 +153,7 @@ do -- Initalize
         local Distance = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, 11), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
         local Weapon = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, 31), Size = UDim2.new(0, 100, 0, 20), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true})
         local Box = Functions:Create("Frame", {Parent = ScreenGui, BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.75, BorderSizePixel = 0})
+        local MiscText = Functions:Create("TextLabel", {Parent = ScreenGui, Position = UDim2.new(0.5, 0, 0, 50), Size = UDim2.new(0, 100, 0, 40), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.Code, TextSize = ESP.FontSize, TextStrokeTransparency = 0, TextStrokeColor3 = Color3.fromRGB(0, 0, 0), RichText = true, Visible = false})
         local Gradient1 = Functions:Create("UIGradient", {Parent = Box, Enabled = ESP.Drawing.Boxes.GradientFill, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Boxes.GradientFillRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Boxes.GradientFillRGB2)}})
         local Outline = Functions:Create("UIStroke", {Parent = Box, Enabled = ESP.Drawing.Boxes.Gradient, Transparency = 0, Color = Color3.fromRGB(255, 255, 255), LineJoinMode = Enum.LineJoinMode.Miter})
         local Gradient2 = Functions:Create("UIGradient", {Parent = Outline, Enabled = ESP.Drawing.Boxes.Gradient, Color = ColorSequence.new{ColorSequenceKeypoint.new(0, ESP.Drawing.Boxes.GradientRGB1), ColorSequenceKeypoint.new(1, ESP.Drawing.Boxes.GradientRGB2)}})
@@ -179,6 +181,7 @@ do -- Initalize
             local function HideESP()
                 Box.Visible = false;
                 Name.Visible = false;
+                MiscText.Visible = false;
                 Distance.Visible = false;
                 Weapon.Visible = false;
                 Healthbar.Visible = false;
@@ -196,11 +199,41 @@ do -- Initalize
                 Flag1.Visible = false;
                 Chams.Enabled = false;
                 Flag2.Visible = false;
+                if statsUpdateConnection then
+                    statsUpdateConnection:Disconnect()
                 if not plr then
                     ScreenGui:Destroy();
                     Connection:Disconnect();
                 end
             end
+
+                local function UpdateStats()
+                pcall(function()
+                    local Stats = game:GetService("ReplicatedStorage")["Stats"..plr.Name]
+                    if Stats then
+                        local df = Stats.Stats.DF.Value ~= "" and Stats.Stats.DF.Value or "None"
+                        local stamina = Stats.Stamina.Value
+                        local maxStamina = Stats.Stamina.MaxValue
+                        MiscText.Text = string.format(
+                            "[<font color='#%02x%02x%02x'>%s</font>]\n[%d/%d]",
+                            ESP.Drawing.Weapons.WeaponTextRGB.R * 255,
+                            ESP.Drawing.Weapons.WeaponTextRGB.G * 255,
+                            ESP.Drawing.Weapons.WeaponTextRGB.B * 255,
+                            df, stamina, maxStamina
+                        )
+                    end
+                end)
+            end
+
+            -- Автообновление статистики
+            statsUpdateConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                if plr and plr.Parent then
+                    UpdateStats()
+                else
+                    HideESP()
+                end
+            end)
+
             --
             Connection = Euphoria.RunService.RenderStepped:Connect(function()
                 if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
@@ -240,6 +273,12 @@ do -- Initalize
 
                         -- Teamcheck
                         if ESP.TeamCheck and plr ~= lplayer and ((lplayer.Team ~= plr.Team and plr.Team) or (not lplayer.Team and not plr.Team)) and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") then
+                                if ESP.Drawing.Flags.Misc then
+                                MiscText.Visible = true
+                                MiscText.Position = UDim2.new(0, Pos.X, 0, Pos.Y + h/2 + 25)
+                            else
+                                MiscText.Visible = false
+                            end
 
                             do -- Chams
                                 Chams.Adornee = plr.Character
